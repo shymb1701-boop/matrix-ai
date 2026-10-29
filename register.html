@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#000000">
+<title>MATRIX AI - Create Your Profile</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--ac:#ff9f43;--ac2:#7c6cff;--ease:cubic-bezier(.16,1,.3,1)}
+*{margin:0;padding:0;box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:#000;color:#fff;font-family:'Inter','Segoe UI',system-ui,sans-serif;overflow-x:hidden}
+#sky{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block;background:#000}
+.veil{position:fixed;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse at 50% 45%,rgba(0,0,0,0) 0%,rgba(0,0,0,.6) 85%),radial-gradient(ellipse at 20% 15%,rgba(255,120,30,.08),transparent 50%),radial-gradient(ellipse at 85% 85%,rgba(100,80,255,.1),transparent 50%)}
+.stage{position:relative;z-index:2;min-height:100vh;min-height:100dvh;display:grid;place-items:center;padding:24px 16px}
+.card{width:100%;max-width:440px;opacity:0;background:rgba(18,18,24,.78);backdrop-filter:blur(22px) saturate(1.4);-webkit-backdrop-filter:blur(22px) saturate(1.4);border:1px solid rgba(255,255,255,.09);border-radius:26px;padding:34px 30px 24px;box-shadow:0 30px 90px rgba(0,0,0,.75),inset 0 1px 0 rgba(255,255,255,.07)}
+.ready .card{animation:cardIn .9s var(--ease) forwards}
+@keyframes cardIn{from{opacity:0;transform:translateY(40px) scale(.96)}to{opacity:1;transform:none}}
+.rise{opacity:0;transform:translateY(18px)}
+.ready .rise{animation:rise .7s var(--ease) forwards;animation-delay:calc(.25s + var(--i,0)*.09s)}
+@keyframes rise{to{opacity:1;transform:none}}
+@keyframes spin{to{transform:rotate(360deg)}}
+h1{font-family:'Space Grotesk',sans-serif;font-size:25px;font-weight:700;text-align:center;letter-spacing:-.3px}
+.sub{font-size:13.5px;color:#8a8a8e;text-align:center;margin-top:8px;line-height:20px;padding:0 6px}
+.avatar{text-align:center;margin-top:22px}
+.orb{position:relative;display:block;width:84px;height:84px;margin:0 auto;padding:0;border:0;background:none;color:inherit;cursor:pointer}
+.orb::before{content:'';position:absolute;inset:-6px;border-radius:50%;background:conic-gradient(from 0deg,transparent,var(--ac),var(--ac2),transparent 70%);animation:spin 5s linear infinite;-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 calc(100% - 1px));mask:radial-gradient(farthest-side,transparent calc(100% - 2px),#000 calc(100% - 1px))}
+.orb-core{position:absolute;inset:0;border-radius:50%;display:grid;place-items:center;font-family:'Space Grotesk',sans-serif;font-size:32px;font-weight:700;background:radial-gradient(circle at 30% 30%,#ffae44,#8a3b00 62%,#1a0a00);background-size:cover;background-position:center;box-shadow:0 0 34px rgba(255,120,20,.35),inset -8px -6px 14px rgba(0,0,0,.6)}
+.orb-core.has-photo{font-size:0;color:transparent}
+.orb-core.pop{animation:pop .45s var(--ease)}
+@keyframes pop{0%{transform:scale(.7)}60%{transform:scale(1.12)}100%{transform:scale(1)}}
+.cam{position:absolute;right:-2px;bottom:-2px;width:28px;height:28px;border-radius:50%;background:#fff;display:grid;place-items:center;box-shadow:0 2px 10px rgba(0,0,0,.5);transition:transform .25s var(--ease)}
+.orb:hover .cam{transform:scale(1.12)}
+.pfp-actions{margin-top:12px;font-size:12.5px;display:flex;gap:14px;justify-content:center}
+.pfp-hint{display:block;margin-top:5px;min-height:15px;font-size:11.5px;color:#6d6d76}
+.pfp-hint.bad{color:#ff6b6b}
+.pfp-hint.ok{color:#4ade80}
+.link{background:none;border:0;color:var(--ac);cursor:pointer;font:inherit;text-decoration:underline}
+.pv{margin-top:10px;line-height:1.35}
+.pv b{display:block;font-size:17px;font-weight:600}
+.pv span{display:block;font-size:13px;color:#8a8a8e}
+.pv .ph{opacity:.4}
+.field{margin-top:14px}
+.box{position:relative}
+.box input{width:100%;height:58px;padding:22px 46px 6px 18px;border-radius:16px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.38);color:#fff;font:500 15px 'Inter','Segoe UI',sans-serif;outline:none;color-scheme:dark;transition:border-color .25s,box-shadow .25s,background .25s}
+.box input:focus{border-color:rgba(255,159,67,.65);background:rgba(0,0,0,.55);box-shadow:0 0 0 4px rgba(255,140,30,.12)}
+.box input::-webkit-calendar-picker-indicator{opacity:.6;cursor:pointer}
+.box label{position:absolute;left:18px;top:19px;font-size:14.5px;color:#7b7b84;pointer-events:none;transform-origin:left top;transition:transform .25s var(--ease),color .25s}
+.box input:focus + label,.box input:not(:placeholder-shown) + label{transform:translateY(-12px) scale(.74);color:var(--ac)}
+.pre input{padding-left:38px}
+.pre label{left:38px}
+.prefix{position:absolute;left:18px;top:21px;font-size:15px;font-style:normal;color:#7b7b84;transition:color .25s}
+.box input:focus ~ .prefix{color:var(--ac)}
+.field[data-state=ok] input{border-color:rgba(74,222,128,.55)}
+.field[data-state=bad] input{border-color:rgba(255,107,107,.6)}
+.state{position:absolute;right:16px;top:19px;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:700;opacity:0;transform:scale(.5);transition:opacity .25s,transform .3s var(--ease);pointer-events:none}
+.dob .state{right:48px}
+.field[data-state=ok] .state,.field[data-state=bad] .state{opacity:1;transform:none}
+.field[data-state=ok] .state{background:rgba(74,222,128,.18);color:#4ade80}
+.field[data-state=ok] .state::after{content:'\2713'}
+.field[data-state=bad] .state{background:rgba(255,107,107,.18);color:#ff6b6b}
+.field[data-state=bad] .state::after{content:'\2715'}
+.hint{display:block;min-height:16px;margin:7px 4px 0;font-size:12px;color:#6d6d76;transition:color .25s}
+.hint.ok{color:#4ade80}
+.hint.bad{color:#ff6b6b}
+.shake{animation:shake .45s}
+@keyframes shake{20%{transform:translateX(-7px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+.submit{position:relative;width:100%;height:54px;margin-top:20px;border:0;border-radius:28px;background:#fff;color:#000;font:600 15px 'Inter','Segoe UI',sans-serif;cursor:pointer;overflow:hidden;box-shadow:0 0 24px rgba(255,255,255,.14);transition:transform .2s var(--ease),box-shadow .3s}
+.submit:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(255,255,255,.22)}
+.submit:disabled{cursor:default}
+.submit .label{transition:opacity .25s,transform .3s var(--ease)}
+.submit svg{position:absolute;left:50%;top:50%;width:24px;height:24px;margin:-12px 0 0 -12px;opacity:0;transition:opacity .25s}
+.submit.loading .label,.submit.success .label{opacity:0;transform:translateY(8px)}
+.submit.loading .b-spin{opacity:1;animation:spin .8s linear infinite}
+.submit.success .b-done{opacity:1}
+.b-done path{stroke-dasharray:1;stroke-dashoffset:1}
+.submit.success .b-done path{animation:draw .5s .1s ease forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+.form-msg{min-height:18px;margin-top:12px;font-size:12.5px;text-align:center;color:#ff6b6b}
+.who{text-align:center;font-size:12px;color:#6d6d76;margin-top:6px;word-break:break-all}
+.foot{font-size:10px;color:#3a3a3e;text-align:center;margin-top:18px;font-family:monospace;letter-spacing:3px;text-transform:uppercase}
+@media (prefers-reduced-motion:reduce){.ready .card,.ready .rise{animation-duration:.01s;animation-delay:0s}.orb::before{animation:none}}
+</style>
+</head>
+<body>
+<canvas id="sky" aria-hidden="true"></canvas>
+<div class="veil"></div>
+<main class="stage">
+  <div class="card">
+    <h1 class="rise" style="--i:0">Create your profile</h1>
+    <p class="sub rise" style="--i:1">Tell us a little about yourself to finish setting up your Matrix AI account.</p>
+
+    <div class="avatar rise" style="--i:2">
+      <button type="button" class="orb" id="orbBtn" aria-label="Upload profile photo">
+        <div class="orb-core" id="orbCore">&#10022;</div>
+        <span class="cam"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg></span>
+      </button>
+      <div class="pfp-actions">
+        <button type="button" class="link" id="pickBtn">Upload photo</button>
+        <button type="button" class="link" id="clearBtn" hidden>Remove</button>
+      </div>
+      <small class="pfp-hint" id="pfpHint" aria-live="polite">Optional. JPG or PNG, up to 5 MB.</small>
+      <input type="file" id="pfpInput" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
+      <div class="pv"><b id="pvName" class="ph">Your name</b><span id="pvUser" class="ph">@username</span></div>
+    </div>
+
+    <form id="form" novalidate>
+      <div class="field rise" id="fName" style="--i:3">
+        <div class="box">
+          <input id="fullName" name="name" type="text" placeholder=" " autocomplete="name" maxlength="50" required>
+          <label for="fullName">Full name</label>
+          <span class="state"></span>
+        </div>
+        <small class="hint" id="hName" aria-live="polite">Enter the name you would like to be called.</small>
+      </div>
+
+      <div class="field pre rise" id="fUser" style="--i:4">
+        <div class="box">
+          <input id="username" name="username" type="text" placeholder=" " autocomplete="username" maxlength="20" autocapitalize="none" spellcheck="false" required>
+          <label for="username">Username</label>
+          <i class="prefix">@</i>
+          <span class="state"></span>
+        </div>
+        <small class="hint" id="hUser" aria-live="polite">3 to 20 characters: letters, numbers and underscores.</small>
+      </div>
+
+      <div class="field dob rise" id="fDob" style="--i:5">
+        <div class="box">
+          <input id="dob" name="dob" type="date" placeholder=" " autocomplete="bday" min="1900-01-01" required>
+          <label for="dob">Date of birth</label>
+          <span class="state"></span>
+        </div>
+        <small class="hint" id="hDob" aria-live="polite">Private: your date of birth is never shown publicly.</small>
+      </div>
+
+      <button class="submit rise" id="submit" type="submit" style="--i:6">
+        <span class="label">Create profile</span>
+        <svg class="b-spin" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round"><path d="M12 3a9 9 0 0 1 9 9"/></svg>
+        <svg class="b-done" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5" pathLength="1"/></svg>
+      </button>
+      <p class="form-msg" id="formMsg" role="alert"></p>
+    </form>
+
+    <p class="who rise" style="--i:7">Signed in as <b id="who">...</b> &middot; <button type="button" class="link" id="switch">Use a different account</button></p>
+    <p class="foot rise" style="--i:8">MATRIX AI &bull; ORBITAL STATION</p>
+  </div>
+</main>
+
+<script src="sky.js"></script>
+<script type="module">
+import { auth as fbAuth, signOut, updateProfile, onAuthStateChanged, getProfile, getPrivate, saveProfile, savePrivate } from "./profile.js";
+const $ = (id) => document.getElementById(id);
+const form = $("form"), nameI = $("fullName"), userI = $("username"), dobI = $("dob"), btn = $("submit");
+const fName = $("fName"), fUser = $("fUser"), fDob = $("fDob");
+const hName = $("hName"), hUser = $("hUser"), hDob = $("hDob");
+const core = $("orbCore"), pvName = $("pvName"), pvUser = $("pvUser"), msg = $("formMsg");
+const pfpInput = $("pfpInput"), pickBtn = $("pickBtn"), clearBtn = $("clearBtn"), pfpHint = $("pfpHint");
+
+const RESERVED = ["admin", "root", "support", "matrix", "matrixai", "moderator", "system"];
+const NAME_RE = /^[\p{L}][\p{L} .'-]{1,49}$/u;
+const DOB_NOTE = "Private: your date of birth is never shown publicly.";
+const PFP_NOTE = "Optional. JPG or PNG, up to 5 MB.";
+const p2 = (n) => String(n).padStart(2, "0");
+const now = new Date();
+dobI.max = now.getFullYear() + "-" + p2(now.getMonth() + 1) + "-" + p2(now.getDate());
+
+function checkName(v) {
+  v = v.trim().replace(/\s+/g, " ");
+  if (!v) return { s: "idle", m: "Enter the name you would like to be called." };
+  if (v.length < 2) return { s: "bad", m: "Name must be at least 2 characters." };
+  if (!NAME_RE.test(v)) return { s: "bad", m: "Use letters, spaces, apostrophes or hyphens only." };
+  return { s: "ok", m: "Looks good." };
+}
+function checkUser(v) {
+  if (!v) return { s: "idle", m: "3 to 20 characters: letters, numbers and underscores." };
+  if (!/^[a-z]/.test(v)) return { s: "bad", m: "Username must start with a letter." };
+  if (!/^[a-z0-9_]*$/.test(v)) return { s: "bad", m: "Only letters, numbers and underscores are allowed." };
+  if (v.length < 3) return { s: "bad", m: "Username must be at least 3 characters." };
+  if (RESERVED.indexOf(v) !== -1) return { s: "bad", m: "This username is reserved. Please choose another." };
+  return { s: "ok", m: "Looks good." };
+}
+function checkDob(v, strict) {
+  if (!v) return strict ? { s: "bad", m: "Please enter your date of birth." } : { s: "idle", m: DOB_NOTE };
+  const d = new Date(v + "T00:00:00");
+  if (isNaN(d.getTime()) || d.getFullYear() < 1900) return { s: "bad", m: "Please enter a valid date." };
+  if (d > new Date()) return { s: "bad", m: "Date of birth cannot be in the future." };
+  return { s: "ok", m: "Looks good. This stays private." };
+}
+function apply(field, hint, r) {
+  field.dataset.state = r.s === "idle" ? "" : r.s;
+  hint.textContent = r.m;
+  hint.className = "hint " + r.s;
+}
+function shake(el) { el.classList.remove("shake"); void el.offsetWidth; el.classList.add("shake"); }
+
+let photo = null, lastLetter = "";
+function pfpMsg(text, state) { pfpHint.textContent = text; pfpHint.className = "pfp-hint " + (state || ""); }
+function updatePreview() {
+  const n = nameI.value.trim().replace(/\s+/g, " "), u = userI.value;
+  pvName.textContent = n || "Your name";
+  pvName.classList.toggle("ph", !n);
+  pvUser.textContent = "@" + (u || "username");
+  pvUser.classList.toggle("ph", !u);
+  const letter = n ? n.charAt(0).toUpperCase() : "\u2726";
+  if (letter !== lastLetter) {
+    core.textContent = letter;
+    if (!photo) { core.classList.remove("pop"); void core.offsetWidth; core.classList.add("pop"); }
+    lastLetter = letter;
+  }
+}
+function setPhoto(url) {
+  photo = url;
+  core.style.backgroundImage = url ? 'url("' + url + '")' : "";
+  core.classList.toggle("has-photo", !!url);
+  clearBtn.hidden = !url;
+  pickBtn.textContent = url ? "Change photo" : "Upload photo";
+  if (url) { core.classList.remove("pop"); void core.offsetWidth; core.classList.add("pop"); }
+}
+function processImage(file) {
+  return new Promise((resolve, reject) => {
+    const objUrl = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      const S = 256, c = document.createElement("canvas");
+      c.width = c.height = S;
+      const m = Math.min(img.width, img.height);
+      c.getContext("2d").drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, 0, 0, S, S);
+      URL.revokeObjectURL(objUrl);
+      resolve(c.toDataURL("image/jpeg", 0.85));
+    };
+    img.onerror = () => { URL.revokeObjectURL(objUrl); reject(new Error("unreadable")); };
+    img.src = objUrl;
+  });
+}
+$("orbBtn").addEventListener("click", () => pfpInput.click());
+pickBtn.addEventListener("click", () => pfpInput.click());
+clearBtn.addEventListener("click", () => { setPhoto(null); pfpMsg(PFP_NOTE); });
+pfpInput.addEventListener("change", async () => {
+  const f = pfpInput.files[0];
+  pfpInput.value = "";
+  if (!f) return;
+  if (!/^image\/(jpeg|png|webp|gif)$/.test(f.type)) { pfpMsg("Please choose a JPG, PNG, WebP or GIF image.", "bad"); return; }
+  if (f.size > 5 * 1024 * 1024) { pfpMsg("This image is too large. The maximum size is 5 MB.", "bad"); return; }
+  try { setPhoto(await processImage(f)); pfpMsg("Photo added.", "ok"); }
+  catch (e) { pfpMsg("That image could not be read. Please try another one.", "bad"); }
+});
+
+nameI.addEventListener("input", () => { apply(fName, hName, checkName(nameI.value)); updatePreview(); });
+userI.addEventListener("input", () => {
+  const pos = userI.selectionStart;
+  userI.value = userI.value.toLowerCase();
+  userI.setSelectionRange(pos, pos);
+  apply(fUser, hUser, checkUser(userI.value));
+  updatePreview();
+});
+["input", "change"].forEach((ev) => dobI.addEventListener(ev, () => apply(fDob, hDob, checkDob(dobI.value, false))));
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  msg.textContent = "";
+  const n = checkName(nameI.value), u = checkUser(userI.value), d = checkDob(dobI.value, true);
+  apply(fName, hName, n); apply(fUser, hUser, u); apply(fDob, hDob, d);
+  const bad = [[n, nameI], [u, userI], [d, dobI]].find((x) => x[0].s !== "ok");
+  if (bad) { shake(bad[1].closest(".field")); bad[1].focus(); return; }
+  const user = fbAuth.currentUser;
+  if (!user) { location.replace("login.html"); return; }
+  btn.disabled = true; btn.classList.add("loading");
+  try {
+    const fullName = nameI.value.trim().replace(/\s+/g, " ");
+    await saveProfile(user.uid, { name: fullName, username: userI.value, photo: photo });
+    await savePrivate(user.uid, { dob: dobI.value });
+    try { await updateProfile(user, { displayName: fullName }); } catch (e) { /* not critical */ }
+    btn.classList.remove("loading"); btn.classList.add("success");
+    setTimeout(() => { location.href = "dashboard.html"; }, 1100);
+  } catch (err) {
+    btn.disabled = false; btn.classList.remove("loading");
+    if (err && err.code === "app/username-taken") { apply(fUser, hUser, { s: "bad", m: "This username is already taken. Please choose another." }); shake(fUser); userI.focus(); }
+    else msg.textContent = "We could not save your profile. Please try again.";
+  }
+});
+$("switch").addEventListener("click", async () => { await signOut(fbAuth); location.href = "login.html"; });
+
+onAuthStateChanged(fbAuth, async (user) => {
+  if (!user) { location.replace("login.html"); return; }
+  $("who").textContent = user.email || user.displayName || "your account";
+  let p = null, q = null;
+  try { [p, q] = await Promise.all([getProfile(user.uid), getPrivate(user.uid)]); } catch (e) { /* form stays empty */ }
+  const nm = (p && p.name) || user.displayName || "";
+  if (nm && !nameI.value) { nameI.value = nm; apply(fName, hName, checkName(nm)); }
+  if (p && p.username && !userI.value) { userI.value = p.username; apply(fUser, hUser, checkUser(p.username)); }
+  if (q && q.dob && !dobI.value) { dobI.value = q.dob; apply(fDob, hDob, checkDob(q.dob, false)); }
+  if (p && p.photo) setPhoto(p.photo);
+  updatePreview();
+  document.body.classList.add("ready");
+});
+</script>
+</body>
+</html>

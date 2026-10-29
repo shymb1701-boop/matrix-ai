@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Matrix AI</title>
+<script>document.documentElement.classList.add('js');</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --void: #05060c;
+    --ink: #e9edf8;
+    --mute: #9aa3bd;
+    --line: rgba(160, 180, 255, 0.18);
+    --panel: rgba(13, 16, 30, 0.72);
+    --ion: #7aa2ff;
+    --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    --display: "Syne", "Segoe UI", system-ui, sans-serif;
+    --body: "Manrope", "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--void); color: var(--ink); font-family: var(--body); font-size: 1rem; line-height: 1.6; min-height: 100vh; }
+  a { color: inherit; text-decoration: none; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--ion); outline-offset: 3px; }
+
+  #sky { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; }
+  .page { position: relative; z-index: 1; }
+
+  /* ---------- Header ---------- */
+  .topbar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 20;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px clamp(16px, 4vw, 40px);
+    background: linear-gradient(to bottom, rgba(5, 6, 12, 0.92), rgba(5, 6, 12, 0));
+  }
+  .menu-btn { width: 44px; height: 44px; border-radius: 12px; background: transparent; border: 1px solid var(--line); display: grid; place-content: center; gap: 5px; }
+  .menu-btn span { display: block; width: 20px; height: 2px; background: var(--ink); border-radius: 2px; }
+  .actions { display: flex; align-items: center; gap: 12px; min-height: 44px; }
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-height: 44px; padding: 0 22px; border-radius: 14px;
+    border: 1px solid var(--line); background: rgba(13, 16, 30, 0.6);
+    font-weight: 600; font-size: 0.95rem; transition: border-color 0.2s, background 0.2s;
+  }
+  .btn:hover { border-color: var(--ion); }
+  .btn.primary { background: var(--ion); border-color: var(--ion); color: #07102a; }
+  .btn.primary:hover { background: #9db9ff; }
+  .btn[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
+  .avatar { width: 44px; height: 44px; border-radius: 50%; overflow: hidden; border: 1px solid var(--ion); background: #101530; display: grid; place-items: center; font-family: var(--display); font-weight: 700; }
+  .avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+  /* ---------- Drawer ---------- */
+  .scrim { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55); z-index: 30; opacity: 0; pointer-events: none; transition: opacity 0.25s; }
+  .drawer {
+    position: fixed; top: 0; left: 0; bottom: 0; width: min(300px, 84vw); z-index: 40;
+    background: #080a14; border-right: 1px solid var(--line);
+    padding: 24px 20px; transform: translateX(-100%); transition: transform 0.28s ease;
+    display: flex; flex-direction: column; gap: 6px; visibility: hidden;
+  }
+  body.menu-open .drawer { transform: none; visibility: visible; }
+  body.menu-open .scrim { opacity: 1; pointer-events: auto; }
+  .drawer .brand { font-family: var(--display); font-weight: 800; font-size: 1.4rem; margin-bottom: 18px; }
+  .drawer a { padding: 12px 14px; border-radius: 12px; color: var(--mute); display: block; }
+  .drawer a:hover { background: rgba(122, 162, 255, 0.1); color: var(--ink); }
+  .drawer hr { border: 0; border-top: 1px solid var(--line); margin: 10px 0; }
+
+  /* ---------- Page dots ---------- */
+  .dots { position: fixed; right: clamp(8px, 1.6vw, 22px); top: 50%; transform: translateY(-50%); z-index: 15; display: flex; flex-direction: column; }
+  .dots button { width: 22px; height: 22px; background: none; border: 0; display: grid; place-items: center; }
+  .dots button::before { content: ""; width: 8px; height: 8px; border-radius: 50%; border: 1px solid rgba(190, 205, 255, 0.6); transition: transform 0.3s var(--ease), background 0.3s, border-color 0.3s; }
+  .dots button.on::before { background: var(--ion); border-color: var(--ion); transform: scale(1.4); }
+
+  /* ---------- Pages: one scroll = one page ---------- */
+  .pg { position: relative; padding: 88px clamp(16px, 4vw, 40px) 36px; display: flex; align-items: center; overflow-x: clip; }
+  .pg-inner { width: 100%; max-width: 1180px; margin: 0 auto; will-change: opacity, transform; }
+  @media (min-width: 861px) and (min-height: 600px) {
+    html { scroll-snap-type: y mandatory; }
+    .pg { min-height: 100vh; min-height: 100dvh; scroll-snap-align: start; scroll-snap-stop: always; }
+  }
+
+  /* ---------- Slide-in reveal (same technique as the first site) ---------- */
+  .js .reveal {
+    opacity: 0;
+    transition: opacity 0.9s var(--ease), transform 0.9s var(--ease), border-color 0.2s;
+    transition-delay: var(--d, 0s), var(--d, 0s), 0s;
+    will-change: opacity, transform;
+  }
+  .js .reveal.left   { transform: translateX(-120px) scale(0.96); }
+  .js .reveal.right  { transform: translateX(120px) scale(0.96); }
+  .js .reveal.bottom { transform: translateY(120px) scale(0.96); }
+  .js .reveal.active { opacity: 1; transform: translate(0) scale(1); }
+
+  /* ---------- Page 1: hero ---------- */
+  .hero { justify-content: center; }
+  .banner {
+    width: min(760px, 100%); margin: 0 auto; text-align: center;
+    padding: clamp(28px, 5vw, 48px) 24px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: 22px; backdrop-filter: blur(6px);
+  }
+  .banner h1 { font-family: var(--display); font-weight: 800; font-size: clamp(2.6rem, 8vw, 5rem); line-height: 1.05; letter-spacing: -0.02em; }
+  .banner p { color: var(--mute); margin-top: 14px; font-size: 1.1rem; }
+  .scroll-hint { position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 0.75rem; letter-spacing: 0.3em; text-transform: uppercase; color: var(--mute); }
+  .scroll-hint i { width: 1px; height: 34px; background: linear-gradient(var(--ion), transparent); transform-origin: top; animation: hint 1.9s ease-in-out infinite; }
+  @keyframes hint { 0% { transform: scaleY(0); } 50% { transform: scaleY(1); } 100% { transform: scaleY(1); opacity: 0; } }
+
+  /* ---------- Page 2: models ---------- */
+  .models .head { text-align: center; }
+  .models h2 { font-family: var(--display); font-weight: 700; font-size: clamp(1.7rem, 4vw, 2.4rem); }
+  .models .head p { color: var(--mute); margin: 8px auto 36px; max-width: 52ch; }
+  .card-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 28px; align-items: start; }
+  .card { display: flex; flex-direction: column; min-height: clamp(280px, 44vh, 400px); background: var(--panel); border: 1px solid var(--line); border-radius: 30px; overflow: hidden; }
+  .card:nth-child(2) { margin-top: 48px; }
+  .card:nth-child(3) { margin-top: 8px; }
+  .card:nth-child(4) { margin-top: 56px; }
+  .card:hover { border-color: var(--c); }
+  .card-head { height: clamp(100px, 17vh, 150px); border-bottom: 1px solid var(--line); display: grid; place-items: center; background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--c) 16%, transparent), transparent 70%); }
+  .card-head svg { height: 100%; width: 100%; max-height: 120px; max-width: 120px; }
+  .card-body { padding: 22px 22px 26px; }
+  .card-body h3 { font-family: var(--display); font-weight: 700; font-size: 1.35rem; margin-bottom: 8px; }
+  .card-body p { color: var(--mute); font-size: 0.95rem; }
+  .card-body .tag { display: inline-block; margin-top: 14px; font-size: 0.85rem; color: var(--c); font-weight: 600; }
+
+  /* ---------- Detail pages (image box alternates left / right) ---------- */
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(32px, 6vw, 88px); align-items: center; }
+  .flip .visual { order: 2; }
+  .visual {
+    width: min(100%, 62vh, 500px); aspect-ratio: 1 / 1; justify-self: center;
+    border: 1px solid var(--line); border-radius: 44px; overflow: hidden;
+    background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--c) 18%, transparent), rgba(13, 16, 30, 0.7) 72%);
+    display: grid; place-items: center;
+  }
+  .visual svg { width: 82%; height: 82%; }
+  .visual img { width: 100%; height: 100%; object-fit: cover; }
+  .info h2 { font-family: var(--display); font-weight: 800; font-size: clamp(1.9rem, 4vw, 2.8rem); line-height: 1.1; margin-bottom: 8px; }
+  .info .lead { color: var(--mute); margin-bottom: 18px; max-width: 48ch; }
+  .features { list-style: none; }
+  .features li { padding: 14px 0; border-top: 1px solid var(--line); max-width: 60ch; }
+  .features li:last-child { border-bottom: 1px solid var(--line); }
+  .features strong { display: block; font-weight: 600; color: var(--c); }
+  .features span { color: var(--mute); font-size: 0.95rem; }
+  .features a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+  .enter { display: flex; justify-content: flex-end; margin-top: 24px; }
+  .enter .btn { min-width: 170px; background: var(--c); border-color: var(--c); color: #060814; }
+
+  /* ---------- Page 7: plans (coming soon) ---------- */
+  .plans .head { text-align: center; margin-bottom: clamp(20px, 4vh, 40px); }
+  .plans .eyebrow { font-size: 0.75rem; letter-spacing: 0.4em; color: #c084fc; }
+  .plans h2 { font-family: var(--display); font-weight: 700; font-size: clamp(2rem, 5vw, 3.4rem); line-height: 1.1; margin-top: 10px; }
+  .plans .head .sub { color: var(--mute); margin-top: 10px; font-size: 0.98rem; }
+  .soon-note { display: inline-block; margin-top: 14px; padding: 6px 18px; border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 999px; font-size: 0.75rem; letter-spacing: 0.35em; text-transform: uppercase; color: rgba(233, 237, 248, 0.42); }
+  .plan-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; align-items: end; max-width: 1000px; margin: 0 auto; }
+  .plan { display: flex; flex-direction: column; padding: 32px 36px; background: rgba(20, 20, 20, 0.9); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 32px; }
+  .plan.featured { padding: 40px 36px; background: rgba(30, 20, 45, 0.92); border-color: rgba(168, 85, 247, 0.5); box-shadow: 0 0 44px rgba(168, 85, 247, 0.2); }
+  .plan.soon > * { opacity: 0.58; }
+  .plan .name { font-size: 0.78rem; letter-spacing: 0.32em; font-weight: 600; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .plan .n1 { color: #9ca3af; }
+  .plan .n2 { color: #c084fc; }
+  .plan .n3 { color: #22d3ee; }
+  .plan .badge { font-size: 0.62rem; letter-spacing: 0.02em; padding: 4px 10px; border-radius: 999px; background: #a855f7; color: #fff; font-weight: 700; }
+  .plan .cap { color: rgba(255, 255, 255, 0.38); font-size: 0.74rem; margin-top: 4px; }
+  .plan .price { font-family: var(--display); font-weight: 800; font-size: 3rem; line-height: 1.1; margin-top: 16px; }
+  .plan .price small { font-family: var(--body); font-weight: 500; font-size: 1rem; color: #8a8a93; }
+  .plan ul { list-style: none; margin: 22px 0 26px; font-size: 0.95rem; color: #a3a3ad; }
+  .plan.featured ul { color: rgba(255, 255, 255, 0.88); }
+  .plan li { padding: 6px 0; }
+  .plan li::before { content: "\2713"; margin-right: 8px; }
+  .pbtn { display: block; margin-top: auto; padding: 15px 18px; border-radius: 999px; text-align: center; font-weight: 700; font-size: 0.92rem; cursor: not-allowed; user-select: none; }
+  .pbtn.p1 { background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); }
+  .pbtn.p2 { background: #fff; color: #000; }
+  .pbtn.p3 { background: #22d3ee; color: #000; }
+
+  /* ---------- Page 8: contact ---------- */
+  .contact-grid { display: grid; grid-template-columns: 5fr 6fr; gap: clamp(24px, 4vw, 56px); align-items: center; }
+  .c-card { padding: clamp(24px, 4vw, 44px); background: rgba(20, 20, 20, 0.9); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 32px; }
+  .c-card .eyebrow { font-size: 0.72rem; letter-spacing: 0.4em; color: #4ade80; }
+  .c-card h2 { font-family: var(--display); font-weight: 800; font-size: clamp(2rem, 4.4vw, 3rem); line-height: 1; margin-top: 14px; }
+  .c-card h2 span { color: rgba(255, 255, 255, 0.38); }
+  .c-rows { margin-top: clamp(22px, 4vh, 40px); display: grid; gap: 22px; }
+  .c-row { display: flex; gap: 16px; align-items: center; }
+  .c-ico { width: 52px; height: 52px; flex-shrink: 0; border-radius: 50%; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.1); display: grid; place-items: center; font-size: 1.2rem; }
+  .c-lab { font-size: 0.7rem; letter-spacing: 0.2em; color: #7b7b85; text-transform: uppercase; }
+  .c-val { font-size: 0.97rem; margin-top: 2px; word-break: break-word; }
+  .c-val a:hover { color: #4ade80; }
+  .c-quote { margin-top: clamp(22px, 4vh, 40px); padding-left: 20px; border-left: 2px solid rgba(74, 222, 128, 0.6); }
+  .c-quote p { font-family: var(--display); font-size: clamp(1.05rem, 1.8vw, 1.3rem); line-height: 1.35; }
+  .c-quote cite { display: block; margin-top: 12px; font-style: normal; font-size: 0.66rem; letter-spacing: 0.4em; color: rgba(255, 255, 255, 0.4); text-transform: uppercase; }
+  .c-image { position: relative; height: min(600px, 68vh); border-radius: 32px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.1); background: #0a0a0a; }
+  .c-image img { width: 100%; height: 100%; object-fit: cover; opacity: 0.85; transition: opacity 0.7s; }
+  .c-image:hover img { opacity: 1; }
+  .c-image::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, rgba(0, 0, 0, 0.82), rgba(0, 0, 0, 0.1) 55%, transparent); }
+  .c-cap { position: absolute; left: 0; right: 0; bottom: 0; z-index: 1; padding: 32px; }
+  .c-cap .k { font-size: 0.7rem; letter-spacing: 0.4em; color: rgba(255, 255, 255, 0.55); }
+  .c-cap h3 { font-family: var(--display); font-size: 1.6rem; line-height: 1.2; margin-top: 8px; }
+  .c-cap .n { font-size: 0.8rem; color: rgba(255, 255, 255, 0.55); margin-top: 10px; }
+  .legal { text-align: center; color: var(--mute); font-size: 0.85rem; margin-top: 30px; }
+  @media (min-width: 861px) and (max-height: 760px) {
+    .plan { padding: 22px 28px; }
+    .plan.featured { padding: 28px; }
+    .plan ul { margin: 14px 0 18px; }
+    .plan .price { font-size: 2.5rem; margin-top: 10px; }
+    .c-card { padding: 24px 30px; }
+    .c-rows { gap: 14px; }
+    .legal { margin-top: 16px; }
+  }
+  @media (max-width: 860px) {
+    .contact-grid { grid-template-columns: 1fr; }
+    .c-image { height: 340px; }
+    .plan, .plan.featured { padding: 26px 24px; }
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (min-width: 861px) and (max-height: 760px) {
+    .pg { padding-top: 76px; padding-bottom: 20px; }
+    .features li { padding: 9px 0; }
+    .info .lead { margin-bottom: 10px; }
+    .enter { margin-top: 14px; }
+    .models .head p, .plans .head p { margin-bottom: 22px; }
+  }
+  @media (max-width: 1000px) {
+    .card-grid { grid-template-columns: repeat(2, 1fr); }
+    .card:nth-child(n) { margin-top: 0; }
+    .card:nth-child(even) { margin-top: 32px; }
+  }
+  @media (max-width: 860px) {
+    .dots { display: none; }
+    .pg { min-height: 0; padding-top: 92px; padding-bottom: 56px; }
+    .hero { min-height: 82vh; }
+    .detail-grid { grid-template-columns: 1fr; }
+    .flip .visual { order: 0; }
+    .visual { width: min(100%, 320px); }
+    .plan-grid { grid-template-columns: 1fr; }
+    .js .reveal.left { transform: translateX(-50px) scale(0.97); }
+    .js .reveal.right { transform: translateX(50px) scale(0.97); }
+    .js .reveal.bottom { transform: translateY(50px) scale(0.97); }
+  }
+  @media (max-width: 560px) {
+    .card-grid { grid-template-columns: 1fr; }
+    .card:nth-child(n) { margin-top: 0; }
+    .actions .btn { padding: 0 14px; font-size: 0.88rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .js .reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+    .scroll-hint i { animation: none; }
+    * { transition: none !important; }
+  }
+
+  /* ---------- Sign-in gate popup ---------- */
+  .gate { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 20px; background: rgba(3, 4, 10, 0.72); backdrop-filter: blur(5px); animation: gfade 0.25s ease; }
+  .gate[hidden] { display: none; }
+  .gate-box { position: relative; width: min(420px, 100%); padding: 32px 28px 24px; text-align: center; background: #0a0d1a; border: 1px solid var(--line); border-radius: 24px; box-shadow: 0 30px 90px rgba(0, 0, 0, 0.7); animation: gpop 0.4s var(--ease); }
+  .gate-box h3 { font-family: var(--display); font-weight: 700; font-size: 1.35rem; line-height: 1.25; }
+  .gate-box p { color: var(--mute); margin-top: 10px; font-size: 0.95rem; }
+  .gate-actions { display: flex; gap: 12px; justify-content: center; margin-top: 22px; flex-wrap: wrap; }
+  .gate-actions .btn { min-width: 130px; }
+  .gate-later { margin-top: 14px; background: none; border: 0; color: var(--mute); font-size: 0.88rem; text-decoration: underline; text-underline-offset: 3px; }
+  .gate-x { position: absolute; top: 10px; right: 14px; width: 32px; height: 32px; background: none; border: 0; color: var(--mute); font-size: 1.4rem; line-height: 1; }
+  .gate-x:hover, .gate-later:hover { color: var(--ink); }
+  body.gate-open { overflow: hidden; }
+  @keyframes gfade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes gpop { from { opacity: 0; transform: translateY(16px) scale(0.96); } to { opacity: 1; transform: none; } }
+</style>
+</head>
+<body>
+
+<canvas id="sky" aria-hidden="true"></canvas>
+<div class="scrim" id="scrim"></div>
+
+<aside class="drawer" id="drawer" aria-label="Main menu">
+  <div class="brand">Matrix AI</div>
+  <a href="#home">Home</a>
+  <a href="#models">Models</a>
+  <a href="#chatbot">Chatbot</a>
+  <a href="#voice">Voice</a>
+  <a href="#study">Study mode</a>
+  <hr>
+  <a href="#plans">Plans</a>
+  <a href="#contact">Contact</a>
+  <hr>
+  <div id="drawer-auth"></div>
+</aside>
+
+<nav class="dots" id="dots" aria-label="Pages"></nav>
+
+<div class="gate" id="gate" hidden role="dialog" aria-modal="true" aria-labelledby="gate-title">
+  <div class="gate-box">
+    <button class="gate-x" id="gate-x" type="button" aria-label="Close">&times;</button>
+    <h3 id="gate-title">Sign up or log in to continue</h3>
+    <p>Create a free Matrix AI account, or log in if you already have one.</p>
+    <div class="gate-actions">
+      <a class="btn primary" id="gate-signup" href="https://matrixai.dpdns.org/login.html">Sign up</a>
+      <a class="btn" href="https://matrixai.dpdns.org/login.html">Log in</a>
+    </div>
+    <button class="gate-later" id="gate-later" type="button">Not now</button>
+  </div>
+</div>
+
+<div class="page" id="top">
+  <header class="topbar">
+    <button class="menu-btn" id="menu-btn" aria-label="Open menu" aria-expanded="false" aria-controls="drawer">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="actions" id="actions"></div>
+  </header>
+
+  <!-- Page 1: product name -->
+  <section class="pg hero" id="home" data-title="Home">
+    <div class="pg-inner">
+      <div class="banner reveal bottom">
+        <h1>Matrix AI</h1>
+        <p>Ask, speak and study with one assistant.</p>
+      </div>
+    </div>
+    <a class="scroll-hint" href="#models" aria-label="Scroll to the models"><span>Scroll</span><i></i></a>
+  </section>
+
+  <!-- Page 2: four model prototypes -->
+  <section class="pg models" id="models" data-title="Models">
+    <div class="pg-inner">
+      <div class="head reveal bottom">
+        <h2>Choose a model</h2>
+        <p>Each model is built for a different kind of work. Select one to see what it can do.</p>
+      </div>
+      <div class="card-grid">
+        <a class="card reveal bottom" href="#chatbot" style="--c:#7aa2ff; --d:0s">
+          <div class="card-head" data-shape="chatbot"></div>
+          <div class="card-body">
+            <h3>Chatbot</h3>
+            <p>Ask anything, from general knowledge to writing and coding help.</p>
+          </div>
+        </a>
+        <a class="card reveal bottom" href="#voice" style="--c:#f0a35e; --d:0.1s">
+          <div class="card-head" data-shape="voice"></div>
+          <div class="card-body">
+            <h3>Voice</h3>
+            <p>Talk to Matrix AI and let it act for you, hands free.</p>
+          </div>
+        </a>
+        <a class="card reveal bottom" href="#study" style="--c:#6fd3b0; --d:0.2s">
+          <div class="card-head" data-shape="study"></div>
+          <div class="card-body">
+            <h3>Study mode</h3>
+            <p>Plan for exams, practise daily and fix your mistakes.</p>
+          </div>
+        </a>
+        <a class="card reveal bottom" href="#upcoming" style="--c:#b39dff; --d:0.3s">
+          <div class="card-head" data-shape="upcoming"></div>
+          <div class="card-body">
+            <h3>Upcoming</h3>
+            <p>A new model is in development.</p>
+            <span class="tag">Coming soon</span>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Page 3: Chatbot (image box on the left) -->
+  <section class="pg detail" id="chatbot" data-title="Chatbot" style="--c:#7aa2ff">
+    <div class="pg-inner"><div class="detail-grid">
+      <!-- To use a real picture, replace this empty div with: <div class="visual reveal left"><img src="your-image.jpg" alt="Chatbot preview"></div> -->
+      <div class="visual reveal left" data-shape="chatbot"></div>
+      <div class="info reveal right">
+        <h2>Chatbot</h2>
+        <p class="lead">A general assistant that answers questions and helps you get things done.</p>
+        <ul class="features">
+          <li><strong>Ask anything</strong><span>General knowledge, everyday questions and quick facts.</span></li>
+          <li><strong>Write and code</strong><span>Draft text, fix code and get clear explanations.</span></li>
+          <li><strong>Translate</strong><span>Switch between Hindi, English and Bengali.</span></li>
+          <li><strong>Analyse files</strong><span>Read documents, PDFs and images, then answer questions about them.</span></li>
+          <li><strong>Create files</strong><span>Produce Word, Excel, PowerPoint and PDF files.</span></li>
+        </ul>
+        <div class="enter"><a class="btn" href="#gate" data-href="https://chatbot.matrixai.dpdns.org" data-gate="Chatbot">Enter now</a></div>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- Page 4: Voice (image box on the right) -->
+  <section class="pg detail flip" id="voice" data-title="Voice" style="--c:#f0a35e">
+    <div class="pg-inner"><div class="detail-grid">
+      <div class="visual reveal right" data-shape="voice"></div>
+      <div class="info reveal left">
+        <h2>Voice</h2>
+        <p class="lead">Speak to Matrix AI instead of typing, and let it handle tasks for you.</p>
+        <ul class="features">
+          <li><strong>Ask by speaking</strong><span>Ask anything out loud and hear the answer.</span></li>
+          <li><strong>AFK mode</strong><span>Keep working while Matrix AI handles requests for you.</span></li>
+          <li><strong>Everyday actions</strong><span>Search for songs, open apps and send messages.</span></li>
+          <li><strong>Gesture control</strong><span>The camera detects your hand gestures as commands.</span></li>
+          <li><strong>Camera visualization</strong><span>See what the camera detects in real time.</span></li>
+        </ul>
+        <div class="enter"><a class="btn" href="#gate" data-href="https://voice.matrixai.dpdns.org" data-gate="Voice">Enter now</a></div>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- Page 5: Study mode (image box on the left) -->
+  <section class="pg detail" id="study" data-title="Study mode" style="--c:#6fd3b0">
+    <div class="pg-inner"><div class="detail-grid">
+      <div class="visual reveal left" data-shape="study"></div>
+      <div class="info reveal right">
+        <h2>Study mode</h2>
+        <p class="lead">A study partner that plans your preparation and shows you where to improve.</p>
+        <ul class="features">
+          <li><strong>Exam planner</strong><span>Build a schedule around your upcoming exams.</span></li>
+          <li><strong>Daily tasks</strong><span>Keep every study day organised and on track.</span></li>
+          <li><strong>Daily knowledge test</strong><span>Check what you remember with a short test each day.</span></li>
+          <li><strong>Answer-writing scheme</strong><span>Learn how to structure answers the way examiners expect.</span></li>
+          <li><strong>Mistake improver</strong><span>Review your errors and see how to correct them.</span></li>
+        </ul>
+        <div class="enter"><a class="btn" href="#gate" data-href="https://study.matrixai.dpdns.org" data-gate="Study mode">Enter now</a></div>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- Page 6: Upcoming (image box on the right) -->
+  <section class="pg detail flip" id="upcoming" data-title="Upcoming" style="--c:#b39dff">
+    <div class="pg-inner"><div class="detail-grid">
+      <div class="visual reveal right" data-shape="upcoming"></div>
+      <div class="info reveal left">
+        <h2>Upcoming</h2>
+        <p class="lead">The next Matrix AI model is being built.</p>
+        <ul class="features">
+          <li><strong>In development</strong><span>This model is not ready to use yet.</span></li>
+          <li><strong>Details soon</strong><span>Features will be listed here once they are confirmed.</span></li>
+        </ul>
+        <div class="enter"><a class="btn" href="#upcoming" aria-disabled="true" tabindex="-1">Coming soon</a></div>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- Page 7: Plans (coming soon) -->
+  <section class="pg plans" id="plans" data-title="Plans">
+    <div class="pg-inner">
+      <div class="head reveal bottom">
+        <p class="eyebrow">PLANS &bull; MATRIX AI</p>
+        <h2>Choose Your Universe</h2>
+        <p class="sub">From a star to everything that exists &mdash; starting at just &#8377;29/mo</p>
+        <p class="soon-note">Coming soon</p>
+      </div>
+      <div class="plan-grid">
+        <div class="plan soon reveal left">
+          <div class="name n1">UNIVERSE</div>
+          <div class="cap">Begin your journey</div>
+          <div class="price">&#8377;29 <small>/mo</small></div>
+          <ul><li>Unlimited AI Queries</li><li>Basic Star Maps</li><li>Voice Assistant</li></ul>
+          <span class="pbtn p1" aria-disabled="true">Enter Universe</span>
+        </div>
+        <div class="plan featured soon reveal bottom" style="--d:0.1s">
+          <div class="name n2">XENOVERSE <span class="badge">MOST CHOSEN</span></div>
+          <div class="cap">Beyond one reality</div>
+          <div class="price">&#8377;79 <small>/mo</small></div>
+          <ul><li>Unlimited AI Queries</li><li>Full 88 Constellations</li><li>Voice + Camera Scan</li><li>Saved Chat History</li></ul>
+          <span class="pbtn p2" aria-disabled="true">Enter Xenoverse</span>
+        </div>
+        <div class="plan soon reveal right">
+          <div class="name n3">OMNIVERSE</div>
+          <div class="cap">All that exists &amp; beyond</div>
+          <div class="price">&#8377;149 <small>/mo</small></div>
+          <ul><li>Unlimited AI Queries</li><li>All Universes Live</li><li>API Access (1,000 calls/mo)</li><li>Early Cosmos Features</li></ul>
+          <span class="pbtn p3" aria-disabled="true">Enter Omniverse</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Page 8: Contact -->
+  <section class="pg contact" id="contact" data-title="Contact">
+    <div class="pg-inner">
+      <div class="contact-grid">
+        <div class="c-card reveal left">
+          <p class="eyebrow">CONTACT &bull; MATRIX AI</p>
+          <h2>Get In Touch<br><span>With Us</span></h2>
+          <div class="c-rows">
+            <div class="c-row"><div class="c-ico" aria-hidden="true">&#128205;</div><div><p class="c-lab">Office location</p><p class="c-val">Agartala, Tripura</p></div></div>
+            <div class="c-row"><div class="c-ico" aria-hidden="true">&#128231;</div><div><p class="c-lab">Email us</p><p class="c-val"><a href="mailto:matrixsupport1310@gmail.com">matrixsupport1310@gmail.com</a></p></div></div>
+          </div>
+          <blockquote class="c-quote"><p>&ldquo;Every star is a question the universe is still asking. We build the answers.&rdquo;</p><cite>&mdash; Team Matrix AI</cite></blockquote>
+        </div>
+        <div class="c-image reveal right">
+          <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&amp;auto=format&amp;fit=crop" alt="Earth at night seen from space" loading="lazy">
+          <div class="c-cap"><p class="k">OUR VISION</p><h3>Building Future<br>Of Space Intelligence</h3><p class="n">10,000+ explorers trust us</p></div>
+        </div>
+      </div>
+      <p class="legal">Matrix AI is a school project. All rights reserved.</p>
+    </div>
+  </section>
+</div>
+
+<script>
+/* ---------- Account state ----------
+   Guests see Login and Sign up (both open the same page).
+   A signed-in person sees Explore plans, My profile and their photo.
+   The real sign-in state comes from ./profile.js (Firebase) on the same site.
+   Add ?preview=dashboard to the address to preview the signed-in view. */
+var LOGIN_URL = 'https://matrixai.dpdns.org/login.html';
+var PROFILE_URL = 'https://matrixai.dpdns.org/settings.html';
+
+var actions = document.getElementById('actions');
+var drawerAuth = document.getElementById('drawer-auth');
+var signedIn = false;
+
+/* Model links only work for signed-in people; guests get the popup instead */
+function syncGates() {
+  document.querySelectorAll('[data-href]').forEach(function (a) {
+    a.setAttribute('href', signedIn ? a.getAttribute('data-href') : '#gate');
+  });
+}
+
+function link(text, href, cls) {
+  var a = document.createElement('a');
+  a.className = 'btn' + (cls ? ' ' + cls : '');
+  a.href = href;
+  a.textContent = text;
+  return a;
+}
+function clearNode(n) { while (n.firstChild) n.removeChild(n.firstChild); }
+function drawerLink(text, href) {
+  var a = document.createElement('a');
+  a.href = href; a.textContent = text;
+  drawerAuth.appendChild(a);
+}
+
+function renderAuth(user) {
+  signedIn = !!user; syncGates();
+  clearNode(actions); clearNode(drawerAuth);
+  if (user) {
+    actions.appendChild(link('Explore plans', '#plans'));
+    actions.appendChild(link('My profile', PROFILE_URL, 'primary'));
+    var av = document.createElement('a');
+    av.className = 'avatar';
+    av.href = PROFILE_URL;
+    av.setAttribute('aria-label', 'Your profile photo');
+    if (user.photo) {
+      var img = document.createElement('img');
+      img.src = user.photo; img.alt = ''; img.referrerPolicy = 'no-referrer';
+      av.appendChild(img);
+    } else {
+      av.textContent = (user.name || 'U').trim().charAt(0).toUpperCase();
+    }
+    actions.appendChild(av);
+    drawerLink('My profile', PROFILE_URL);
+  } else {
+    actions.appendChild(link('Login', LOGIN_URL));
+    actions.appendChild(link('Sign up', LOGIN_URL, 'primary'));
+    drawerLink('Login', LOGIN_URL);
+    drawerLink('Sign up', LOGIN_URL);
+  }
+}
+
+
+/* ---------- Self-contained Firebase loader (does not depend on profile.js) ---------- */
+var FB_BASE = 'https://www.gstatic.com/firebasejs/11.0.2/';
+var FB_CONFIG = {
+  apiKey: 'AIzaSyASINeHEf-gzsWe1n2s0vovN7sCvLSHKac',
+  authDomain: 'matrix-ai-f56d8.firebaseapp.com',
+  projectId: 'matrix-ai-f56d8',
+  storageBucket: 'matrix-ai-f56d8.firebasestorage.app',
+  messagingSenderId: '455829803612',
+  appId: '1:455829803612:web:dc154f07c67619e7e98c99'
+};
+var fbPromise = null;
+function loadFb() {
+  if (fbPromise) return fbPromise;
+  fbPromise = Promise.all([import(FB_BASE + 'firebase-app.js'), import(FB_BASE + 'firebase-auth.js')]).then(function (r) {
+    var app = r[0].initializeApp(FB_CONFIG), auth = r[1].getAuth(app), fs = null;
+    function firestore() {
+      if (!fs) fs = import(FB_BASE + 'firebase-firestore.js').then(function (f) { return { f: f, db: f.getFirestore(app) }; });
+      return fs;
+    }
+    return {
+      auth: auth,
+      onAuthStateChanged: r[1].onAuthStateChanged,
+      signOut: r[1].signOut,
+      /* Live profile. If Firestore is unavailable, onError runs and the page falls back to the sign-in name and photo */
+      watchProfile: function (uid, onData, onError) {
+        var stop = null, dead = false, got = false;
+        var timer = setTimeout(function () { if (!got && !dead && onError) onError(new Error('Profile request timed out')); }, 5000);
+        firestore().then(function (x) {
+          if (dead) return;
+          stop = x.f.onSnapshot(x.f.doc(x.db, 'users', uid), function (s) {
+            got = true; clearTimeout(timer);
+            onData(s.exists() ? s.data() : null);
+          }, function (e) { got = true; clearTimeout(timer); if (onError) onError(e); });
+        }).catch(function (e) { clearTimeout(timer); if (onError) onError(e); });
+        return function () { dead = true; clearTimeout(timer); if (stop) stop(); };
+      }
+    };
+  });
+  return fbPromise;
+}
+
+(function initAuth() {
+  if (new URLSearchParams(location.search).get('preview') === 'dashboard') {
+    renderAuth({ name: 'Student', photo: '' });
+    return;
+  }
+  var settled = false, unsub = null;
+  /* If sign-in state cannot be read, show the guest view */
+  setTimeout(function () { if (!settled) { settled = true; renderAuth(null); } }, 2500);
+  loadFb().then(function (m) {
+    m.onAuthStateChanged(m.auth, function (u) {
+      if (unsub) { unsub(); unsub = null; }
+      settled = true;
+      if (!u) { renderAuth(null); return; }
+      renderAuth({ name: u.displayName || (u.email ? u.email.split('@')[0] : 'U'), photo: u.photoURL });
+      unsub = m.watchProfile(u.uid, function (p) {
+        if (p) renderAuth({ name: p.name || p.username, photo: p.photo || u.photoURL });
+      }, function () {});
+    });
+  }).catch(function (e) { console.error('home: could not load sign-in state', e); if (!settled) { settled = true; renderAuth(null); } });
+})();
+
+/* ---------- Gate: only signed-in people can enter a model ---------- */
+(function gate() {
+  var box = document.getElementById('gate'), title = document.getElementById('gate-title'), lastFocus = null;
+  function open(name) {
+    title.textContent = 'Sign up or log in to use ' + name;
+    lastFocus = document.activeElement;
+    box.hidden = false;
+    document.body.classList.add('gate-open');
+    setTimeout(function () { document.getElementById('gate-signup').focus(); }, 30);
+  }
+  function close() {
+    box.hidden = true;
+    document.body.classList.remove('gate-open');
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+  function intercept(e) {
+    var a = e.target.closest('[data-gate]');
+    if (!a || signedIn) return;
+    e.preventDefault();
+    open(a.getAttribute('data-gate'));
+  }
+  document.addEventListener('click', intercept);
+  document.addEventListener('auxclick', intercept);
+  box.addEventListener('click', function (e) { if (e.target === box) close(); });
+  document.getElementById('gate-x').addEventListener('click', close);
+  document.getElementById('gate-later').addEventListener('click', close);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !box.hidden) close(); });
+})();
+
+/* ---------- Menu drawer ---------- */
+(function drawer() {
+  var btn = document.getElementById('menu-btn');
+  function set(open) {
+    document.body.classList.toggle('menu-open', open);
+    btn.setAttribute('aria-expanded', String(open));
+    btn.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+  }
+  btn.addEventListener('click', function () { set(!document.body.classList.contains('menu-open')); });
+  document.getElementById('scrim').addEventListener('click', function () { set(false); });
+  document.getElementById('drawer').addEventListener('click', function (e) { if (e.target.closest('a')) set(false); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') set(false); });
+})();
+
+/* ---------- Slide-in reveal: each element slides in when its page arrives ---------- */
+(function reveal() {
+  var els = document.querySelectorAll('.reveal');
+  if (!('IntersectionObserver' in window)) { els.forEach(function (e) { e.classList.add('active'); }); return; }
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) { e.target.classList.toggle('active', e.isIntersecting); });
+  }, { threshold: 0.2 });
+  els.forEach(function (e) { io.observe(e); });
+})();
+
+/* ---------- Blend between pages: the page you leave fades and softly blurs ---------- */
+(function blend() {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var mq = window.matchMedia('(min-width: 861px) and (min-height: 600px)');
+  var items = [].slice.call(document.querySelectorAll('.pg')).map(function (pg) {
+    return { pg: pg, el: pg.querySelector('.pg-inner') };
+  });
+  var ticking = false;
+  function reset() { items.forEach(function (it) { it.el.style.opacity = ''; it.el.style.filter = ''; it.el.style.transform = ''; }); }
+  function update() {
+    ticking = false;
+    if (!mq.matches) { reset(); return; }
+    var vh = window.innerHeight;
+    items.forEach(function (it) {
+      var r = it.pg.getBoundingClientRect();
+      if (r.bottom < 0 || r.top > vh) return;
+      var p = r.top > 0 ? r.top / vh : Math.max(0, vh - r.bottom) / vh;
+      p = Math.min(p, 1);
+      var e = 1 - Math.pow(1 - p, 3);
+      it.el.style.opacity = e < 0.01 ? '' : (1 - e * 0.7).toFixed(3);
+      it.el.style.filter = e < 0.05 ? '' : 'blur(' + (e * 2.5).toFixed(1) + 'px)';
+      it.el.style.transform = e < 0.01 ? '' : 'scale(' + (1 - e * 0.02).toFixed(4) + ')';
+    });
+  }
+  function request() { if (!ticking) { ticking = true; requestAnimationFrame(update); } }
+  window.addEventListener('scroll', request, { passive: true });
+  window.addEventListener('resize', request);
+  update();
+})();
+
+/* ---------- Page dots ---------- */
+(function dots() {
+  var pages = [].slice.call(document.querySelectorAll('.pg'));
+  var nav = document.getElementById('dots');
+  pages.forEach(function (pg) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.title = pg.getAttribute('data-title');
+    b.setAttribute('aria-label', 'Go to ' + pg.getAttribute('data-title'));
+    b.addEventListener('click', function () { pg.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+    nav.appendChild(b);
+  });
+  if (!('IntersectionObserver' in window)) return;
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (!e.isIntersecting) return;
+      var i = pages.indexOf(e.target);
+      [].forEach.call(nav.children, function (b, j) {
+        b.classList.toggle('on', j === i);
+        if (j === i) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
+      });
+    });
+  }, { threshold: 0.55 });
+  pages.forEach(function (p) { io.observe(p); });
+})();
+
+/* ---------- Constellation figures for each model ---------- */
+var SHAPES = {
+  chatbot:  { pts: [[12,70],[28,40],[48,52],[66,22],[88,36],[78,74],[50,84]], edges: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,0],[2,6]] },
+  voice:    { pts: [[8,50],[22,28],[34,68],[48,20],[60,76],[74,34],[92,50]],  edges: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6]] },
+  study:    { pts: [[50,10],[18,40],[30,84],[70,84],[82,40],[50,50]],          edges: [[0,1],[1,2],[2,3],[3,4],[4,0],[0,5],[5,2],[5,3]] },
+  upcoming: { pts: [[30,32],[50,16],[70,32],[60,54],[50,64],[50,86]],          edges: [[0,1],[1,2],[2,3],[3,4]], dim: true }
+};
+var NS = 'http://www.w3.org/2000/svg';
+function el(name, attrs) {
+  var n = document.createElementNS(NS, name);
+  for (var k in attrs) n.setAttribute(k, attrs[k]);
+  return n;
+}
+function drawShape(host) {
+  var shape = SHAPES[host.getAttribute('data-shape')];
+  if (!shape) return;
+  var color = getComputedStyle(host).getPropertyValue('--c').trim() || '#7aa2ff';
+  var svg = el('svg', { viewBox: '0 0 100 100', 'aria-hidden': 'true' });
+  var opacity = shape.dim ? 0.55 : 1;
+  shape.edges.forEach(function (e) {
+    var a = shape.pts[e[0]], b = shape.pts[e[1]];
+    svg.appendChild(el('line', { x1: a[0], y1: a[1], x2: b[0], y2: b[1], stroke: color, 'stroke-width': 0.7, 'stroke-opacity': 0.6 * opacity, 'stroke-dasharray': shape.dim ? '2 2' : '' }));
+  });
+  shape.pts.forEach(function (p) {
+    svg.appendChild(el('circle', { cx: p[0], cy: p[1], r: 5, fill: color, 'fill-opacity': 0.14 * opacity }));
+    svg.appendChild(el('circle', { cx: p[0], cy: p[1], r: 1.9, fill: '#fff', 'fill-opacity': opacity }));
+  });
+  host.appendChild(svg);
+}
+document.querySelectorAll('[data-shape]').forEach(drawShape);
+
+/* ---------- Starfield with constellations ---------- */
+(function sky() {
+  var canvas = document.getElementById('sky');
+  var ctx = canvas.getContext('2d');
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var stars = [], w = 0, h = 0, dpr = 1;
+  var LINK = 140;
+
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    w = window.innerWidth; h = window.innerHeight;
+    canvas.width = w * dpr; canvas.height = h * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var count = Math.round(Math.min(150, Math.max(50, (w * h) / 14000)));
+    stars = [];
+    for (var i = 0; i < count; i++) {
+      stars.push({
+        x: Math.random() * w, y: Math.random() * h,
+        vx: (Math.random() - 0.5) * 0.12, vy: (Math.random() - 0.5) * 0.12,
+        r: Math.random() * 1.3 + 0.4, ph: Math.random() * Math.PI * 2
+      });
+    }
+  }
+
+  function frame(t) {
+    ctx.clearRect(0, 0, w, h);
+    for (var i = 0; i < stars.length; i++) {
+      var s = stars[i];
+      if (!reduce) {
+        s.x += s.vx; s.y += s.vy;
+        if (s.x < -10) s.x = w + 10; else if (s.x > w + 10) s.x = -10;
+        if (s.y < -10) s.y = h + 10; else if (s.y > h + 10) s.y = -10;
+      }
+      for (var j = i + 1; j < stars.length; j++) {
+        var o = stars[j], dx = s.x - o.x, dy = s.y - o.y, d = Math.sqrt(dx * dx + dy * dy);
+        if (d < LINK) {
+          ctx.strokeStyle = 'rgba(150,175,255,' + (0.22 * (1 - d / LINK)).toFixed(3) + ')';
+          ctx.lineWidth = 0.7;
+          ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(o.x, o.y); ctx.stroke();
+        }
+      }
+      var a = reduce ? 0.8 : 0.55 + 0.45 * Math.sin(t / 900 + s.ph);
+      ctx.fillStyle = 'rgba(225,233,255,' + a.toFixed(3) + ')';
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
+    }
+    if (!reduce) requestAnimationFrame(frame);
+  }
+
+  resize();
+  window.addEventListener('resize', function () { resize(); if (reduce) frame(0); });
+  frame(0);
+})();
+</script>
+</body>
+</html>
